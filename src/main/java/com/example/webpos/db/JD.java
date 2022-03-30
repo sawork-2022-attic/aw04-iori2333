@@ -60,7 +60,7 @@ public class JD implements PosDB {
             String img = "https:".concat(el.getElementsByTag("img").eq(0).attr("data-lazy-img"));
             String price = el.getElementsByAttribute("data-price").text();
             String title = el.getElementsByClass("p-name").eq(0).text();
-            if (title.indexOf("，") >= 0)
+            if (title.contains("，"))
                 title = title.substring(0, title.indexOf("，"));
 
             Product product = new Product(id, title, Double.parseDouble(price), img);
