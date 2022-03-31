@@ -18,6 +18,8 @@ public class PosController {
 
     private PosService posService;
 
+    private Cart cart;
+
     @Autowired
     public void setSession(HttpSession session) {
         this.session = session;
@@ -40,6 +42,9 @@ public class PosController {
     @GetMapping("/")
     public String pos(Model model) {
         var cart = getCart();
+        if (posService.products() != null && cart.getItems().isEmpty()) {
+            posService.add(cart, posService.randomProduct(), 1);
+        }
         model.addAttribute("products", posService.products());
         model.addAttribute("cart", cart);
         return "index";

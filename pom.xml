@@ -82,7 +82,7 @@
                 <version>3.2.0</version>
                 <configuration>
                     <to>
-                        <image>app-webpos</image>
+                        <image>app-webpos-cached</image>
                     </to>
                     <allowInsecureRegistries>true</allowInsecureRegistries>
                 </configuration>
