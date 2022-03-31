@@ -109,12 +109,12 @@ backend servers
     <artifactId>spring-boot-starter-cache</artifactId>
 </dependency>
 <dependency>
-    <groupId>org.springframework.session</groupId>
-    <artifactId>spring-session-data-redis</artifactId>
+<groupId>org.springframework.session</groupId>
+<artifactId>spring-session-data-redis</artifactId>
 </dependency>
 <dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-redis</artifactId>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-data-redis</artifactId>
 </dependency>
 ```
 
@@ -134,13 +134,13 @@ spring.redis.cache.port=6379
 @Cacheable(cacheNames = "product", key = "#productId")
 public Product getProduct(String productId) {
     ...
-}
+    }
 
 @Override
 @Cacheable(cacheNames = "products")
 public List<Product> getProducts() {
     ...
-}
+    }
 ```
 
 为WebPos配置App的Cache支持：
@@ -157,7 +157,25 @@ public class WebPosApplication {
 }
 ```
 
+为Controller添加Session：
 
+```java
+private HttpSession session;
+
+@Autowired
+public void setSession(HttpSession session) {
+    this.session = session;
+}
+
+public Cart getCart() {
+    Cart cart = (Cart) session.getAttribute("cart");
+    if (cart == null) {
+        cart = new Cart();
+        session.setAttribute("cart", cart);
+    }
+    return cart;
+}
+```
 
 测试文件仍按照第一节所给出的，得到结果如下：
 
@@ -221,6 +239,65 @@ setUp(scn.inject(atOnceUsers(500)).protocols(httpProtocol))
 ```
 
 可见，延迟时间大大降低，这验证了缓存的重大作用。
+
+## Redis集群实验
+
+最后，我们使用多个Redis服务器构成集群进行测试。
+
+根据文档，至少需要6个服务器才可以构成集群，但我们应用较小，不需使用如此之多，因此在`application.properties`中只指定了3个节点。
+
+```
+spring.redis.cluster.nodes=127.0.0.1:7000,127.0.0.1:7001,127.0.0.1:7002
+```
+
+Redis节点配置信息如下：
+
+```
+port 7000
+cluster-enabled yes
+cluster-config-file nodes.conf
+cluster-node-timeout 5000
+appendonly yes
+```
+
+此处我们也只给出了3台服务器的配置，余下的均是大同小异。需要注意的是，执行时需要保证三个配置文件分别位于三个不同的子文件夹，否则会导致文件`nodes.conf`以及临时文件的冲突。
+
+我们首先分别在配置文件夹中运行：
+
+```shell
+redis-server ./redis-700x.conf &
+```
+
+最后构建集群：
+
+```shell
+redis-cli --cluster create 127.0.0.1:7000 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 127.0.0.1:7004 127.0.0.1:7005 --cluster-replicas 1
+```
+
+此时开启程序，并运行上一小节内的改进后的测试脚本，实验结果为：
+
+```
+================================================================================
+---- Global Information --------------------------------------------------------
+> request count                                       2500 (OK=2500   KO=0     )
+> min response time                                     56 (OK=56     KO=-     )
+> max response time                                   1100 (OK=1100   KO=-     )
+> mean response time                                   649 (OK=649    KO=-     )
+> std deviation                                        117 (OK=117    KO=-     )
+> response time 50th percentile                        656 (OK=656    KO=-     )
+> response time 75th percentile                        706 (OK=705    KO=-     )
+> response time 95th percentile                        811 (OK=811    KO=-     )
+> response time 99th percentile                        962 (OK=962    KO=-     )
+> mean requests/sec                                    625 (OK=625    KO=-     )
+---- Response Time Distribution ------------------------------------------------
+> t < 800 ms                                          2355 ( 94%)
+> 800 ms < t < 1200 ms                                 145 (  6%)
+> t > 1200 ms                                            0 (  0%)
+> failed                                                 0 (  0%)
+================================================================================
+```
+
+可见性能又获得了极大的提升，为以上所有提升方法中效果最为显著的一项。
 
 # WebPOS
 
